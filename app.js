@@ -47,6 +47,12 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const category = args[2].substring(2);
             const targetName = args[3].substring(2);
 
+            let unplayed = false;
+            if (args[4]) {
+                //string to bool
+                unplayed = JSON.parse(args[4].substring(2));
+            }
+
             let hashlist = [];
             let userQuery = { player: player };
             let targetQuery = { player: target };
@@ -75,18 +81,52 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                         }
                     ]
                 }
-                if (scoreIndex > 0 && userScores[scoreIndex].score < targetScores[i].score) {
+                if (scoreIndex === -1 && unplayed == true) {
+                    hashlist.push(songHash);
+                }
+                else if (scoreIndex > 0 && userScores[scoreIndex].score < targetScores[i].score && unplayed == false) {
                     hashlist.push(songHash);
                 }
 
             }
-            let playlist = await createPlaylist(`Sniping_${targetName}`, hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png", `snipe?p=${player}?t=${target}?c=${category}?n=${targetName}`);
+            const playlist = await createPlaylist(`Sniping_${targetName}`, hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png", `snipe?p=${player}?t=${target}?c=${category}?n=${targetName}?u=${unplayed}`);
+            ctx.body = playlist;
+        }
+
+        else if (ctx.url.startsWith(`/activeMatches`)) {
+            const activeMatches = await db.collection("activeMatches").find({}).toArray();
+            let matches = [];
+            for (let i = 0; i < activeMatches.length; i++) {
+                matches.push(activeMatches[i].match)
+            }
+            ctx.body = matches;
+        }
+        else if (ctx.url.startsWith(`/mapper`)) {
+            const args = ctx.querystring.split("?");
+            const mapper = args[0].substring(2);
+
+            const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mapper}$`, $options: "i" } }).toArray();
+            let mapHashes = await hashes(maps);
+
+            const playlist = await createPlaylist(args[1], mapHashes, maps[0].versions[0].coverURL, `mapper?t=${mapper}`);
             ctx.body = playlist;
         }
     });
 
     app.listen(3000);
 })
+
+async function hashes(maps) {
+    let mapHashes = [];
+    for (let i = 0; i < maps.length; i++) {
+        let songhash = {}
+        if (maps[i]?.versions[0]?.hash) {
+            songhash = { hash: maps[i]?.versions[0].hash }
+            mapHashes.push(songhash)
+        }
+    }
+    return mapHashes;
+}
 
 
 async function createPlaylist(playlistName, songs, imageLink, syncEndpoint) {
@@ -106,11 +146,11 @@ async function createPlaylist(playlistName, songs, imageLink, syncEndpoint) {
         playlistTitle: playlistName,
         playlistAuthor: "RankBot",
         playlistDescription: `Playlist has ${songs.length} maps.`,
+        songs: songs,
         customData: {
             AllowDuplicates: false,
             syncURL: `${config.syncURL}/${syncEndpoint}`
         },
-        songs: songs,
         image: image
     }
 
