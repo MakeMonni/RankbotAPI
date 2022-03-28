@@ -4,6 +4,10 @@ const MongoClient = require("mongodb").MongoClient;
 const fetch = require('node-fetch');
 const config = require("./config.json");
 
+const options = {
+    headers: { 'User-Agent': "RankBotApi/1.0.0" }
+}
+
 MongoClient.connect(config.mongourl, async (err, client) => {
     const db = client.db(config.dbName)
 
@@ -16,15 +20,12 @@ MongoClient.connect(config.mongourl, async (err, client) => {
     });
 
     // x-response-time
-
     app.use(async (ctx, next) => {
         const start = Date.now();
         await next();
         const ms = Date.now() - start;
         ctx.set('X-Response-Time', `${ms}ms`);
     });
-
-    // response
 
     app.use(async ctx => {
         if (ctx.url === "/ranked") {
@@ -39,19 +40,15 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let playlist = await createPlaylist("Ranked", hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/880192078217355284/750250421259337748.png", "ranked");
             ctx.body = playlist;
         }
-
         else if (ctx.url.startsWith(`/snipe`)) {
-            const args = ctx.querystring.split("?");
-            const player = args[0].substring(2);
-            const target = args[1].substring(2);
-            const category = args[2].substring(2);
-            const targetName = args[3].substring(2);
-
+            const params = ctx.request.query;
+            const player = params.p;
+            const target = params.t;
+            const category = params.c;
+            const targetName = params.n;
             let unplayed = false;
-            if (args[4]) {
-                //string to bool
-                unplayed = JSON.parse(args[4].substring(2));
-            }
+
+            if (params.u) unplayed = JSON.parse(params.u);
 
             let hashlist = [];
             let userQuery = { player: player };
@@ -89,10 +86,9 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 }
 
             }
-            const playlist = await createPlaylist(`Sniping_${targetName}`, hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png", `snipe?p=${player}?t=${target}?c=${category}?n=${targetName}?u=${unplayed}`);
+            const playlist = await createPlaylist(`Sniping_${targetName}`, hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png", `snipe?p=${player}&t=${target}&c=${category}&n=${targetName}&u=${unplayed}`);
             ctx.body = playlist;
         }
-
         else if (ctx.url.startsWith(`/activeMatches`)) {
             const activeMatches = await db.collection("activeMatches").find({}).toArray();
             let matches = [];
@@ -102,15 +98,72 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             ctx.body = matches;
         }
         else if (ctx.url.startsWith(`/mapper`)) {
-            const args = ctx.querystring.split("?");
-            const mapper = args[0].substring(2);
+            const params = ctx.request.query;
+            const mappers = params.t.split(`,`);
 
-            const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mapper}$`, $options: "i" } }).toArray();
-            let mapHashes = await hashes(maps);
+            let mapperString = "";
+            let allMaps = [];
+            for (let i = 0; i < mappers.length; i++) {
+                const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" } }).toArray();
+                allMaps.push(...maps);
+                mapperString += mappers[i]+",";
+            }
 
-            const playlist = await createPlaylist(args[1], mapHashes, maps[0].versions[0].coverURL, `mapper?t=${mapper}`);
+            let mapHashes = await hashes(allMaps);
+            const playlist = await createPlaylist(mapperString, mapHashes, allMaps[0].versions[0].coverURL, `mapper?t=${mapperString}`);
+
             ctx.body = playlist;
         }
+        else if (ctx.url.startsWith(`/curated`)) {
+            const params = ctx.request.query;
+            let amount = params.a;
+            if (!amount) amount = 20;
+
+            let ids = null;
+            if (params.id) {
+                ids = params.id.split(`,`)
+            }
+
+            if (!ids) {
+                let maps = [];
+                for (let i = 0; maps.length < amount; i++) {
+                    const response = await fetch(`https://beatsaver.com/api/search/text/${i}?sortOrder=Curated`, options)
+                        .then(res => res.json())
+                        .catch(err => console.log(err));
+
+                    const resmaps = response.docs;
+                    maps.push(...resmaps);
+                }
+                const mapsHashes = await hashes(maps.slice(0, amount));
+                const playlist = await createPlaylist("Curated", mapsHashes, null, `curated?a=${amount}`);
+
+                ctx.body = playlist;
+            }
+            else {
+                let maps = [];
+                let idSyncUrl = "";
+                for (let i = 0; i < ids.length; i++) {
+                    let mapsByCurator = [];
+                    idSyncUrl += ids[i] + ",";
+                    for (let j = 0; mapsByCurator.length < amount; j++) {
+                        const response = await fetch(`https://beatsaver.com/api/search/text/${j}?sortOrder=Curated&curator=${ids[i]}`, options)
+                            .then(res => res.json())
+                            .catch(err => console.log(err));
+
+                        const resmaps = response.docs;
+                        mapsByCurator.push(...resmaps.slice(0, amount));
+                    }
+                    maps.push(...mapsByCurator);
+                }
+                const mapsHashes = await hashes(maps);
+                const playlist = await createPlaylist("Curated", mapsHashes, null, `curated?a=${amount}&id=${idSyncUrl}`)
+
+                ctx.body = playlist;
+            }
+
+            //https://beatsaver.com/api/search/text/[x]?sortOrder=Curated&curator=4280701
+        }
+
     });
 
     app.listen(3000);
@@ -121,7 +174,7 @@ async function hashes(maps) {
     for (let i = 0; i < maps.length; i++) {
         let songhash = {}
         if (maps[i]?.versions[0]?.hash) {
-            songhash = { hash: maps[i]?.versions[0].hash }
+            songhash = { hash: maps[i]?.versions[0].hash.toUpperCase() }
             mapHashes.push(songhash)
         }
     }
@@ -154,7 +207,7 @@ async function createPlaylist(playlistName, songs, imageLink, syncEndpoint) {
         image: image
     }
 
-    return playlistString = JSON.stringify(playlist, null, 2);
+    return playlist;
 }
 
 function convertDiffNameBeatSaver(diffName) {
