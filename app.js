@@ -106,7 +106,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" } }).toArray();
                 allMaps.push(...maps);
-                mapperString += mappers[i]+",";
+                mapperString += mappers[i] + ",";
             }
 
             let mapHashes = await hashes(allMaps);
@@ -151,8 +151,9 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                             .catch(err => console.log(err));
 
                         const resmaps = response.docs;
-                        mapsByCurator.push(...resmaps.slice(0, amount));
+                        mapsByCurator.push(...resmaps);
                     }
+                    mapsByCurator = mapsByCurator.slice(0, amount)
                     maps.push(...mapsByCurator);
                 }
                 const mapsHashes = await hashes(maps);
