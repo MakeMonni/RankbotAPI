@@ -104,7 +104,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let mapperString = "";
             let allMaps = [];
             for (let i = 0; i < mappers.length; i++) {
-                const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" } }).toArray();
+                const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } }).toArray();
                 allMaps.push(...maps);
                 mapperString += mappers[i] + ",";
             }
@@ -161,10 +161,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
                 ctx.body = playlist;
             }
-
-            //https://beatsaver.com/api/search/text/[x]?sortOrder=Curated&curator=4280701
         }
-
     });
 
     app.listen(3000);
