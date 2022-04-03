@@ -101,16 +101,14 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const params = ctx.request.query;
             const mappers = params.t.split(`,`);
 
-            let mapperString = "";
             let allMaps = [];
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } }).toArray();
                 allMaps.push(...maps);
-                mapperString += mappers[i] + ",";
             }
 
             let mapHashes = await hashes(allMaps);
-            const playlist = await createPlaylist(mapperString, mapHashes, allMaps[0].versions[0].coverURL, `mapper?t=${mapperString}`);
+            const playlist = await createPlaylist(mappers.join(), mapHashes, allMaps[0].versions[0].coverURL, ctx.request.url.slice(1));
 
             ctx.body = playlist;
         }
