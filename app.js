@@ -120,6 +120,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let ids = null;
             if (params.id) {
                 ids = params.id.split(`,`)
+                ids = ids.filter(e => e)
             }
 
             if (!ids) {
@@ -148,15 +149,17 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                             .then(res => res.json())
                             .catch(err => console.log(err));
 
-                        console.log(response);
-                        const resmaps = response.docs;
-                        mapsByCurator.push(...resmaps);
+                        if (response.docs) {
+                            const resmaps = response.docs;
+                            mapsByCurator.push(...resmaps);
+                        }
+
                     }
                     mapsByCurator = mapsByCurator.slice(0, amount)
                     maps.push(...mapsByCurator);
                 }
                 const mapsHashes = await hashes(maps);
-                const playlist = await createPlaylist("Curated", mapsHashes, null, `curated?a=${amount}&id=${idSyncUrl}`)
+                const playlist = await createPlaylist("Curated", mapsHashes, null, `curated?a=${amount}&id=${idSyncUrl.slice(0, -1)}`)
 
                 ctx.body = playlist;
             }
