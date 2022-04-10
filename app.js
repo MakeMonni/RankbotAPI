@@ -129,7 +129,6 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                         .then(res => res.json())
                         .catch(err => console.log(err));
 
-                    console.log(response);
                     const resmaps = response.docs;
                     maps.push(...resmaps);
                 }
@@ -149,6 +148,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                             .then(res => res.json())
                             .catch(err => console.log(err));
 
+                        console.log(response);
                         const resmaps = response.docs;
                         mapsByCurator.push(...resmaps);
                     }
