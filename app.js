@@ -63,8 +63,8 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 userQuery.ranked = false;
             }
 
-            const targetScores = await db.collection("discordRankBotScores").find(targetQuery).toArray();
-            const userScores = await db.collection("discordRankBotScores").find(userQuery).sort({ date: 1 }).toArray();
+            const targetScores = await db.collection("discordRankBotScores").find(targetQuery).sort({ date: -1 }).toArray();
+            const userScores = await db.collection("discordRankBotScores").find(userQuery).sort({ date: -1 }).toArray();
 
             for (let i = 0; i < targetScores.length; i++) {
                 const scoreIndex = userScores.findIndex(e => e.leaderboardId === targetScores[i].leaderboardId);
