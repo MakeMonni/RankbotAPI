@@ -1,5 +1,6 @@
 const Koa = require('koa');
 const app = new Koa();
+const cors = require('@koa/cors');
 const MongoClient = require("mongodb").MongoClient;
 const fetch = require('node-fetch');
 const config = require("./config.json");
@@ -19,6 +20,8 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         console.log(`${ctx.method} ${ctx.url} - ${rt}`);
     });
 
+    app.use(cors());
+
     // x-response-time
     app.use(async (ctx, next) => {
         const start = Date.now();
@@ -28,20 +31,36 @@ MongoClient.connect(config.mongourl, async (err, client) => {
     });
 
     app.use(async ctx => {
-        if (ctx.url === "/ranked") {
-            const maps = await db.collection("scoresaberRankedMaps").find({}).toArray();
-
+        const params = ctx.request.query;
+        if (ctx.url.startsWith(`/ranked`)) {
+            const type = params?.t;
+            let maps = [];
             let hashlist = [];
-            for (let i = 0; i < maps.length; i++) {
-                const mapHash = { hash: maps[i].hash }
-                if (!hashlist.some(e => e.hash === maps[i].hash)) hashlist.push(mapHash);
+            let syncURL = "ranked"
+            let playlistDesc;
+
+            if (type === "ordered" && type) {
+                maps = await db.collection("scoresaberRankedMaps").find({}).sort({ stars: 1 }).toArray();
+                for (let i = 0; i < maps.length; i++) {
+                    const mapHash = { hash: maps[i].hash, difficulties: [{ name: convertDiffNameBeatSaver(maps[i].diff), characteristic: findPlayCategory(maps[i].diff) }] };
+                    hashlist.push(mapHash);
+                }
+                syncURL += "?t=ordered"
+                playlistDesc = "All Scoresaber ranked maps ordered by star rating 1 by 1";
+            }
+            else {
+                maps = await db.collection("scoresaberRankedMaps").find({}).toArray();
+                for (let i = 0; i < maps.length; i++) {
+                    const mapHash = { hash: maps[i].hash }
+                    if (!hashlist.some(e => e.hash === maps[i].hash)) hashlist.push(mapHash);
+                }
+                playlistDesc = "All Scoresaber ranked maps in no particular order";
             }
 
-            let playlist = await createPlaylist("Ranked", hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/880192078217355284/750250421259337748.png", "ranked");
+            let playlist = await createPlaylist("Ranked", hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/880192078217355284/750250421259337748.png", syncURL, playlistDesc);
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith(`/snipe`)) {
-            const params = ctx.request.query;
             const player = params.p;
             const target = params.t;
             const category = params.c;
@@ -98,7 +117,6 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             ctx.body = matches;
         }
         else if (ctx.url.startsWith(`/mapper`)) {
-            const params = ctx.request.query;
             const mappers = params.t.split(`,`);
 
             let allMaps = [];
@@ -113,7 +131,6 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith(`/curated`)) {
-            const params = ctx.request.query;
             let amount = params.a;
             if (!amount) amount = 20;
 
@@ -164,6 +181,20 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 ctx.body = playlist;
             }
         }
+        else if (ctx.url.startsWith(`/map`)) {
+            const hash = params.h;
+            const key = params.k;
+            let map;
+            if (hash) {
+                map = await db.collection("beatSaverLocal").findOne({ "versions.hash": hash.toUpperCase() });
+            }
+            else if (key) {
+                map = await db.collection("beatSaverLocal").findOne({ key: key.toUpperCase() });
+            }
+            if (map) {
+                ctx.body = map;
+            }
+        }
     });
 
     app.listen(3000);
@@ -182,7 +213,7 @@ async function hashes(maps) {
 }
 
 
-async function createPlaylist(playlistName, songs, imageLink, syncEndpoint) {
+async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, playlistDesc) {
     let image = "";
     if (imageLink) {
         try {
@@ -195,10 +226,16 @@ async function createPlaylist(playlistName, songs, imageLink, syncEndpoint) {
         }
     }
 
+    let syncurl = "";
+    if (syncEndpoint) syncurl = syncEndpoint;
+
+    const date = new Date();
+    const dateString = `${date.getDate()}.${date.getMonth()+1}.${date.getFullYear()} - ${date.getHours()}:${date.getMinutes().toString().padStart(2, `0`)}`
+
     const playlist = {
         playlistTitle: playlistName,
         playlistAuthor: "RankBot",
-        playlistDescription: `Playlist has ${songs.length} maps.`,
+        playlistDescription: `Playlist has ${songs.length} maps.\n` + playlistDesc + `\nPlaylist was created/updated on ${dateString}`,
         songs: songs,
         customData: {
             AllowDuplicates: false,

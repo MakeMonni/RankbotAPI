@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "@koa/cors": "^3.3.0",
     "koa": "^2.13.4",
+    "koa2-cors": "^2.0.6",
     "mongo": "^0.1.0",
     "node-fetch": "^2.6.7"
   }
