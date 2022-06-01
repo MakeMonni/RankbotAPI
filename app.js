@@ -119,6 +119,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         else if (ctx.url.startsWith(`/mapper`)) {
             const mappers = params.t.split(`,`);
 
+            //Change this to user OR type search
             let allMaps = [];
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } }).toArray();
@@ -176,7 +177,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                     maps.push(...mapsByCurator);
                 }
                 const mapsHashes = await hashes(maps);
-                const playlist = await createPlaylist("Curated", mapsHashes, null, `curated?a=${amount}&id=${idSyncUrl.slice(0, -1)}`)
+                const playlist = await createPlaylist("Curated", mapsHashes, null, `curated?a=${amount}&id=${idSyncUrl.slice(0, -1)}`, "This is a curated playlist.")
 
                 ctx.body = playlist;
             }
