@@ -121,13 +121,15 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             //Change this to user OR type search
             let allMaps = [];
+            let playlistDesc = "Playlist has maps from the following mappers: ";
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } }).toArray();
                 allMaps.push(...maps);
+                playlistDesc += `\n${args[i + 1]}`
             }
 
             let mapHashes = await hashes(allMaps);
-            const playlist = await createPlaylist(mappers.join(), mapHashes, allMaps[0].versions[0].coverURL, ctx.request.url.slice(1));
+            const playlist = await createPlaylist(mappers.join(), mapHashes, allMaps[0].versions[0].coverURL, ctx.request.url.slice(1), playlistDesc);
 
             ctx.body = playlist;
         }
@@ -236,7 +238,7 @@ async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, play
     const playlist = {
         playlistTitle: playlistName,
         playlistAuthor: "RankBot",
-        playlistDescription: `Playlist has ${songs.length} maps.\n` + playlistDesc + `\nPlaylist was created/updated on ${dateString}`,
+        playlistDescription: `Playlist has ${songs.length} maps.\n` + playlistDesc + `\nPlaylist was created/updated on:\n${dateString}`,
         songs: songs,
         customData: {
             AllowDuplicates: false,
