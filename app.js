@@ -125,7 +125,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } }).toArray();
                 allMaps.push(...maps);
-                playlistDesc += `\n${args[i + 1]}`
+                playlistDesc += `\n${mappers[i]}`
             }
 
             let mapHashes = await hashes(allMaps);
