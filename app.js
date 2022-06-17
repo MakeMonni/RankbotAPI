@@ -118,6 +118,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         }
         else if (ctx.url.startsWith(`/mapper`)) {
             const mappers = params.t.split(`,`);
+            const keepDeleted = params.k
 
             //Change this to user OR type search
             let allMaps = [];
@@ -126,7 +127,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal")
-                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] }, deleted: { $exists: false } })
+                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] }, deleted: { $exists: false }  })
                     .toArray();
                 allMaps.push(...maps);
                 playlistDesc += `\n${mappers[i]}`
@@ -135,7 +136,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let playlistImage = allMaps[allMaps.length - 1].versions[0].coverURL
             if (mappers.length > 1) {
                 playlistTitle = "Various mappers"
-                playlistImage = "https://cdn.discordapp.com/attachments/840144337231806484/987472229052866610/unknown.png"
+                playlistImage = "https://cdn.discordapp.com/attachments/840144337231806484/987475174637056060/unknown.png"
             }
 
             if (allMaps.length === 0) {
@@ -145,7 +146,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             else {
                 allMaps.sort(function (a, b) { return b.versions[0].createdAt - a.versions[0].createdAt })
                 let mapHashes = await hashes(allMaps);
-                const playlist = await createPlaylist(playlistTitle, mapHashes, allMaps[0].versions[0].coverURL, ctx.request.url.slice(1), playlistDesc);
+                const playlist = await createPlaylist(playlistTitle, mapHashes, playlistImage, ctx.request.url.slice(1), playlistDesc);
                 ctx.body = playlist;
             }
         }
