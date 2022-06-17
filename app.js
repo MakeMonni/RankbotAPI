@@ -123,9 +123,6 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let allMaps = [];
             let playlistDesc = "Playlist has maps from ";
             let playlistTitle = mappers[0];
-            if (mappers.length > 1) {
-                playlistTitle = "Various mappers"
-            }
 
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal")
@@ -133,6 +130,12 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                     .toArray();
                 allMaps.push(...maps);
                 playlistDesc += `\n${mappers[i]}`
+            }
+
+            let playlistImage = allMaps[allMaps.length - 1].versions[0].coverURL
+            if (mappers.length > 1) {
+                playlistTitle = "Various mappers"
+                playlistImage = "https://cdn.discordapp.com/attachments/840144337231806484/987472229052866610/unknown.png"
             }
 
             if (allMaps.length === 0) {
