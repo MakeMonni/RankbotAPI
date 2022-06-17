@@ -130,7 +130,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 playlistDesc += `\n${mappers[i]}`
             }
 
-            allMaps.sort(function(a, b) {return b.versions[0].createrAt-a.versions[0].createrAt})
+            allMaps.sort(function (a, b) { return b.versions[0].createdAt - a.versions[0].createdAt })
             let mapHashes = await hashes(allMaps);
             const playlist = await createPlaylist(mappers.join(), mapHashes, allMaps[0].versions[0].coverURL, ctx.request.url.slice(1), playlistDesc);
 
