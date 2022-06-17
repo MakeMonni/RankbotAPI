@@ -122,19 +122,29 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             //Change this to user OR type search
             let allMaps = [];
             let playlistDesc = "Playlist has maps from ";
+            let playlistTitle = mappers[0];
+            if (mappers.length > 1) {
+                playlistTitle = "Various mappers"
+            }
+
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal")
-                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } })
+                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] }, deleted: { $exists: false } })
                     .toArray();
                 allMaps.push(...maps);
                 playlistDesc += `\n${mappers[i]}`
             }
 
-            allMaps.sort(function (a, b) { return b.versions[0].createdAt - a.versions[0].createdAt })
-            let mapHashes = await hashes(allMaps);
-            const playlist = await createPlaylist(mappers.join(), mapHashes, allMaps[0].versions[0].coverURL, ctx.request.url.slice(1), playlistDesc);
-
-            ctx.body = playlist;
+            if (allMaps.length === 0) {
+                const playlist = await createPlaylist(playlistTitle, [], "", ctx.request.url.slice(1), `Sorry this/these mappers have no maps. \n${playlistDesc}`);
+                ctx.body = playlist;
+            }
+            else {
+                allMaps.sort(function (a, b) { return b.versions[0].createdAt - a.versions[0].createdAt })
+                let mapHashes = await hashes(allMaps);
+                const playlist = await createPlaylist(playlistTitle, mapHashes, allMaps[0].versions[0].coverURL, ctx.request.url.slice(1), playlistDesc);
+                ctx.body = playlist;
+            }
         }
         else if (ctx.url.startsWith(`/curated`)) {
             let amount = params.a;
