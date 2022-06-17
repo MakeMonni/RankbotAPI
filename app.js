@@ -121,9 +121,12 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             //Change this to user OR type search
             let allMaps = [];
-            let playlistDesc = "Playlist has maps from the following mappers: ";
+            let playlistDesc = "Playlist has maps from ";
             for (let i = 0; i < mappers.length; i++) {
-                const maps = await db.collection("beatSaverLocal").find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } }).toArray();
+                const maps = await db.collection("beatSaverLocal")
+                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] } })
+                    .sort({ "versions.createdAt": -1 })
+                    .toArray();
                 allMaps.push(...maps);
                 playlistDesc += `\n${mappers[i]}`
             }
@@ -233,7 +236,7 @@ async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, play
     if (syncEndpoint) syncurl = syncEndpoint;
 
     const date = new Date();
-    const dateString = `${date.getDate()}.${date.getMonth()+1}.${date.getFullYear()} - ${date.getHours()}:${date.getMinutes().toString().padStart(2, `0`)}`
+    const dateString = `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} - ${date.getHours()}:${date.getMinutes().toString().padStart(2, `0`)}`
 
     const playlist = {
         playlistTitle: playlistName,
