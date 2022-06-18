@@ -49,7 +49,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 playlistDesc = "All Scoresaber ranked maps ordered by star rating 1 by 1";
             }
             else {
-                maps = await db.collection("scoresaberRankedMaps").find({}).toArray();
+                maps = await db.collection("scoresaberRankedMaps").find({}).sort({rankedDate: -1}).toArray();
                 for (let i = 0; i < maps.length; i++) {
                     const mapHash = { hash: maps[i].hash }
                     if (!hashlist.some(e => e.hash === maps[i].hash)) hashlist.push(mapHash);
