@@ -136,7 +136,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let playlistImage = allMaps[allMaps.length - 1].versions[0].coverURL
             if (mappers.length > 1) {
                 playlistTitle = "Various mappers"
-                playlistImage = "https://cdn.discordapp.com/attachments/840144337231806484/987475174637056060/unknown.png"
+                playlistImage = "https://cdn.discordapp.com/attachments/840144337231806484/990283151723073616/variousmappers.png"
             }
 
             if (allMaps.length === 0) {
