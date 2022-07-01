@@ -49,7 +49,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 playlistDesc = "All Scoresaber ranked maps ordered by star rating 1 by 1";
             }
             else {
-                maps = await db.collection("scoresaberRankedMaps").find({}).sort({rankedDate: -1}).toArray();
+                maps = await db.collection("scoresaberRankedMaps").find({}).sort({ rankedDate: -1 }).toArray();
                 for (let i = 0; i < maps.length; i++) {
                     const mapHash = { hash: maps[i].hash }
                     if (!hashlist.some(e => e.hash === maps[i].hash)) hashlist.push(mapHash);
@@ -127,7 +127,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             for (let i = 0; i < mappers.length; i++) {
                 const maps = await db.collection("beatSaverLocal")
-                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] }, deleted: { $exists: false }  })
+                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] }, deleted: { $exists: false } })
                     .toArray();
                 allMaps.push(...maps);
                 playlistDesc += `\n${mappers[i]}`
@@ -214,6 +214,16 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             if (map) {
                 ctx.body = map;
             }
+        }
+        else if (ctx.url.startsWith('/random')) {
+            let amount = parseInt(params.a);
+            if(!amount) amount = 25;
+
+            const maps = await db.collection("beatSaverLocal").aggregate([{ $match: { automapper: false } }, { $sample: { size: amount } }]).toArray();
+            const mapHashes = await hashes(maps);
+
+            const playlist = await createPlaylist("Random", mapHashes, "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg", `random?a=${amount}`, "A random playlist :)");
+            ctx.body = playlist;
         }
     });
 
