@@ -105,7 +105,11 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 }
 
             }
-            const playlist = await createPlaylist(`Sniping_${targetName}`, hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png", `snipe?p=${player}&t=${target}&c=${category}&n=${targetName}&u=${unplayed}`);
+            const playlist = await createPlaylist(
+                `Sniping_${targetName}`, 
+                hashlist, 
+                "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png", 
+                `snipe?p=${player}&t=${target}&c=${category}&n=${targetName}&u=${unplayed}`);
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith(`/activeMatches`)) {
@@ -217,12 +221,87 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         }
         else if (ctx.url.startsWith('/random')) {
             let amount = parseInt(params.a);
-            if(!amount) amount = 25;
+            if (!amount) amount = 25;
 
             const maps = await db.collection("beatSaverLocal").aggregate([{ $match: { automapper: false } }, { $sample: { size: amount } }]).toArray();
             const mapHashes = await hashes(maps);
 
-            const playlist = await createPlaylist("Random", mapHashes, "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg", `random?a=${amount}`, "A random playlist :)");
+            const playlist = await createPlaylist(
+                "Random", 
+                mapHashes, 
+                "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg", 
+                `random?a=${amount}`, 
+                "A random playlist :)");
+            ctx.body = playlist;
+        }
+        else if (ctx.url.startsWith('/countryRank')) {
+            const player = params.p;
+            const country = params.c;
+            const rank = params.r
+            const name = params.n
+
+            const result = await db.collection("discordRankBotScores").aggregate([
+                { $match: { ranked: true, country: country } },
+                { $sort: { score: -1, date: 1 } },
+                {
+                    $group: {
+                        _id: { hash: "$hash", diff: "$diff" },
+                        scores: { $push: { score: "$score", player: "$player" } }
+                    }
+                },
+            ]).toArray()
+
+            let maps = []
+            for (let i = 0; i < result.length; i++) {
+                const index = result[i].scores.findIndex(e => e.player === player)
+                if (index === rank - 1 && index !== -1) {
+                    const songHash = {
+                        hash: result[i]._id.hash,
+                        difficulties: [
+                            {
+                                characteristic: findPlayCategory(result[i]._id.diff),
+                                name: convertDiffNameBeatSaver(result[i]._id.diff)
+                            }
+                        ]
+                    }
+                    maps.push(songHash)
+                }
+            }
+            const playlist = await createPlaylist(
+                `${name} rank ${rank}`,
+                maps,
+                `https://cdn.scoresaber.com/avatars/${player}.jpg`,
+                `countryRank?r=${rank}&p=${player}&n=${name}&c=${country}`,
+                `Contains maps where ${name} has the rank ${rank} in ${country}.`);
+
+            ctx.body = playlist
+        }
+        else if (ctx.url.startsWith('/recent')) {
+            const amount = parseInt(params.a);
+            const player = params.p;
+            const name = params.n;
+
+            let maps = [];
+            const result = await db.collection("discordRankBotScores").find({ player: player }).sort({ date: -1 }).limit(amount).toArray();
+            for (let i = 0; i < result.length; i++) {
+                const songHash = {
+                    hash: result[i].hash,
+                    difficulties: [
+                        {
+                            characteristic: findPlayCategory(result[i].diff),
+                            name: convertDiffNameBeatSaver(result[i].diff)
+                        }
+                    ]
+                }
+                maps.push(songHash);
+            }
+            const playlist = await createPlaylist(
+                `Recent ${amount} from ${name}`,
+                maps,
+                `https://cdn.scoresaber.com/avatars/${player}.jpg`,
+                `recent?a=${amount}&p=${player}&n=${name}`,
+                `Contains the ${amount} recent played maps from the player ${name} with the id ${player}.`);
+
             ctx.body = playlist;
         }
     });
