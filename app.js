@@ -321,7 +321,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         {
             const maps = await db.collection("beatSaverLocal").find({deleted: { $exists: true }}).toArray();
             const playlistHashes = await hashes(maps);
-            const playlist = await createPlaylist("Lost & forgotten maps", playlistHashes, `https://cdn.discordapp.com/attachments/840144337231806484/1041468620674445312/image.png`, `deleted`, "This playlist contains maps that are deleted.")
+            const playlist = await createPlaylist("Lost & forgotten maps", playlistHashes, `https://cdn.discordapp.com/attachments/840144337231806484/1041471611213205554/image.png`, `deleted`, "This playlist contains maps that are deleted.")
             ctx.body = playlist;
         }
     });
