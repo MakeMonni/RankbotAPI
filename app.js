@@ -106,9 +106,9 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             }
             const playlist = await createPlaylist(
-                `Sniping_${targetName}`, 
-                hashlist, 
-                "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png", 
+                `Sniping_${targetName}`,
+                hashlist,
+                "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png",
                 `snipe?p=${player}&t=${target}&c=${category}&n=${targetName}&u=${unplayed}`);
             ctx.body = playlist;
         }
@@ -124,18 +124,31 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const mappers = params.t.split(`,`);
             const keepDeleted = params.k
 
-            //Change this to user OR type search
-            let allMaps = [];
             let playlistDesc = "Playlist has maps from ";
             let playlistTitle = mappers[0];
 
+            //Following query can include results from mappers that have spaces that include other mappers names in then in 1 word.
+            let searchString = "";
             for (let i = 0; i < mappers.length; i++) {
-                const maps = await db.collection("beatSaverLocal")
-                    .find({ "metadata.levelAuthorName": { $regex: `^${mappers[i]}$`, $options: "i" }, $expr: { $gt: [{ $strLenCP: "$metadata.levelAuthorName" }, 1] }, deleted: { $exists: false } })
-                    .toArray();
-                allMaps.push(...maps);
-                playlistDesc += `\n${mappers[i]}`
+                searchString += "[[:<:]]" + mappers[i] + "[[:>:]]"
+                if (i < mappers.length-1) searchString += "|";
             }
+
+            //Help for the spaghetti regex https://www.rexegg.com/regex-boundaries.html
+            // Because currently mongodb cannot use regex boundary -> /b
+            
+            const allMaps = await db.collection("beatSaverLocal")
+                .find({
+                    'metadata.levelAuthorName': {
+                        $regex: searchString,
+                        $options: 'i'
+                    },
+                    deleted: { $exists: false }
+                })
+                .toArray();
+
+            console.log("found " + allMaps.length + "maps ")
+            playlistDesc += `\n` + mappers.join(`\n`)
 
             let playlistImage = allMaps[allMaps.length - 1].versions[0].coverURL
             if (mappers.length > 1) {
@@ -227,10 +240,10 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const mapHashes = await hashes(maps);
 
             const playlist = await createPlaylist(
-                "Random", 
-                mapHashes, 
-                "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg", 
-                `random?a=${amount}`, 
+                "Random",
+                mapHashes,
+                "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg",
+                `random?a=${amount}`,
                 "A random playlist :)");
             ctx.body = playlist;
         }
@@ -302,6 +315,13 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 `recent?a=${amount}&p=${player}&n=${name}`,
                 `Contains the ${amount} recent played maps from the player ${name} with the id ${player}.`);
 
+            ctx.body = playlist;
+        }
+        else if (ctx.url.startsWith('/deleted'))
+        {
+            const maps = await db.collection("beatSaverLocal").find({deleted: { $exists: true }}).toArray();
+            const playlistHashes = await hashes(maps);
+            const playlist = await createPlaylist("Lost & forgotten maps", playlistHashes, `https://cdn.discordapp.com/attachments/840144337231806484/1041468620674445312/image.png`, `deleted`, "This playlist contains maps that are deleted.")
             ctx.body = playlist;
         }
     });
