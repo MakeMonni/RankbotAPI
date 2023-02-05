@@ -395,7 +395,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         }
     });
 
-    app.listen(3001);
+    app.listen(config.port);
 })
 
 async function hashes(maps) {
