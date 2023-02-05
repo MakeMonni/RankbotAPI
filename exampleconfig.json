@@ -1,6 +1,8 @@
 {
-    "mongourl": "",
-    "dbName": "",
-    "syncURL": ""
-  }
-  
+  "mongourl": "",
+  "dbName": "",
+  "syncURL": "",
+  "clientID": "",
+  "clientSecret": "",
+  "callbackURL":""
+}
