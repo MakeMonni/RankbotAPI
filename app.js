@@ -345,16 +345,32 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             }
 
             let rankstring = "";
+            let type = "";
+            let titlestring = "";
 
-            if (rank) rankstring = `has the rank ${rank}`
-            else if (higher) rankstring = `is higher rank than ${rank}`
-            else if (lower) rankstring = `is lower rank than ${rank}`
+            if (rank){
+                rankstring = `has the rank ${rank}`;
+                titlestring = `${name} rank ${rank}`
+                type = "r";
+            } 
+            else if (higher){
+                rankstring = `is higher rank than ${higher}`;
+                titlestring = `${name} higher than ${higher}`;
+                type = "h";
+            } 
+            else if (lower){
+                rankstring = `is lower rank than ${lower}`;
+                titlestring = `${name} lower than ${lower}`;
+                type = "l";
+            } 
+
+
 
             const playlist = await createPlaylist(
-                `${name} rank ${rank}`,
+                titlestring,
                 maps,
                 `https://cdn.scoresaber.com/avatars/${player}.jpg`,
-                ctx.url,
+                ctx.request.url.slice(1),
                 `Contains maps where ${name} ${rankstring} in ${country}.`);
 
             ctx.body = playlist
