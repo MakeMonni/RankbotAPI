@@ -1,13 +1,52 @@
 const Koa = require('koa');
-const app = new Koa();
+const bodyParser = require('koa-bodyparser');
+const session = require('koa-generic-session');
+const passport = require('koa-passport');
+const route = require('koa-route')
+
+const sharp = require('sharp');
+const { readdir } = require('fs/promises');
+const fs = require('fs/promises');
+
+const DiscordStrategy = require('passport-discord').Strategy;
+
 const cors = require('@koa/cors');
 const MongoClient = require("mongodb").MongoClient;
 const fetch = require('node-fetch');
 const config = require("./config.json");
+const { fstat } = require('fs');
+
+const app = new Koa();
+
+const scopes = ['identify'];
+
+passport.use(new DiscordStrategy({
+    clientID: config.clientID,
+    clientSecret: config.clientSecret,
+    callbackURL: config.callbackURL,
+    scope: scopes
+},
+    function (accessToken, refreshToken, profile, cb) {
+        profile.refreshToken = refreshToken;
+        User.findOrCreate({ discordId: profile.id }, function (err, user) {
+            if (err)
+                return done(err);
+
+            return cb(err, user);
+        });
+    })
+);
+
+passport.serializeUser(function (user, done) {
+    done(null, user);
+});
+passport.deserializeUser(function (obj, done) {
+    done(null, obj);
+});
 
 const options = {
     headers: { 'User-Agent': "RankBotApi/1.0.0" }
-}
+};
 
 MongoClient.connect(config.mongourl, async (err, client) => {
     const db = client.db(config.dbName)
@@ -20,9 +59,6 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         console.log(`${ctx.method} ${ctx.url} - ${rt}`);
     });
 
-    app.use(cors());
-
-    // x-response-time
     app.use(async (ctx, next) => {
         const start = Date.now();
         await next();
@@ -30,8 +66,23 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         ctx.set('X-Response-Time', `${ms}ms`);
     });
 
+    app.use(session({}));
+    app.use(passport.session())
+    app.use(passport.initialize())
+    app.use(bodyParser())
+
+    app.use(route.get('/auth', passport.authenticate('discord', { scope: scopes }), function (req, res) { }));
+
+    app.use(route.get('/logout', function (req, res) {
+        req.logout();
+        res.redirect('/');
+    }));
+
+    app.use(cors());
+
     app.use(async ctx => {
         const params = ctx.request.query;
+
         if (ctx.url.startsWith(`/ranked`)) {
             const type = params?.t;
             let maps = [];
@@ -59,6 +110,10 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             let playlist = await createPlaylist("Ranked", hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/880192078217355284/750250421259337748.png", syncURL, playlistDesc);
             ctx.body = playlist;
+        }
+        else if (ctx.url.startsWith('/oneclick')) {
+            const key = params.k
+            ctx.redirect(`beatsaver://${key}`)
         }
         else if (ctx.url.startsWith(`/snipe`)) {
             const player = params.p;
@@ -108,8 +163,12 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const playlist = await createPlaylist(
                 `Sniping_${targetName}`,
                 hashlist,
-                "https://cdn.discordapp.com/attachments/840144337231806484/893593688373084210/unknown.png",
-                `snipe?p=${player}&t=${target}&c=${category}&n=${targetName}&u=${unplayed}`);
+                undefined,
+                `snipe?p=${player}&t=${target}&c=${category}&n=${targetName}&u=${unplayed}`,
+                `You are sniping ${targetName}`,
+                `snipe`,
+                target
+            );
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith(`/activeMatches`)) {
@@ -131,12 +190,12 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let searchString = "";
             for (let i = 0; i < mappers.length; i++) {
                 searchString += "[[:<:]]" + mappers[i] + "[[:>:]]"
-                if (i < mappers.length-1) searchString += "|";
+                if (i < mappers.length - 1) searchString += "|";
             }
 
             //Help for the spaghetti regex https://www.rexegg.com/regex-boundaries.html
             // Because currently mongodb cannot use regex boundary -> /b
-            
+
             const allMaps = await db.collection("beatSaverLocal")
                 .find({
                     'metadata.levelAuthorName': {
@@ -251,6 +310,8 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const player = params.p;
             const country = params.c;
             const rank = params.r
+            const lower = params.l
+            const higher = params.h
             const name = params.n
 
             const result = await db.collection("discordRankBotScores").aggregate([
@@ -267,25 +328,34 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let maps = []
             for (let i = 0; i < result.length; i++) {
                 const index = result[i].scores.findIndex(e => e.player === player)
-                if (index === rank - 1 && index !== -1) {
-                    const songHash = {
-                        hash: result[i]._id.hash,
-                        difficulties: [
-                            {
-                                characteristic: findPlayCategory(result[i]._id.diff),
-                                name: convertDiffNameBeatSaver(result[i]._id.diff)
-                            }
-                        ]
+                if (index !== -1) {
+                    if ((index === rank - 1) || (index < lower - 1) || index > higher - 1) {
+                        const songHash = {
+                            hash: result[i]._id.hash,
+                            difficulties: [
+                                {
+                                    characteristic: findPlayCategory(result[i]._id.diff),
+                                    name: convertDiffNameBeatSaver(result[i]._id.diff)
+                                }
+                            ]
+                        }
+                        maps.push(songHash)
                     }
-                    maps.push(songHash)
                 }
             }
+
+            let rankstring = "";
+
+            if (rank) rankstring = `has the rank ${rank}`
+            else if (higher) rankstring = `is higher rank than ${rank}`
+            else if (lower) rankstring = `is lower rank than ${rank}`
+
             const playlist = await createPlaylist(
                 `${name} rank ${rank}`,
                 maps,
                 `https://cdn.scoresaber.com/avatars/${player}.jpg`,
-                `countryRank?r=${rank}&p=${player}&n=${name}&c=${country}`,
-                `Contains maps where ${name} has the rank ${rank} in ${country}.`);
+                ctx.url,
+                `Contains maps where ${name} ${rankstring} in ${country}.`);
 
             ctx.body = playlist
         }
@@ -317,16 +387,15 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             ctx.body = playlist;
         }
-        else if (ctx.url.startsWith('/deleted'))
-        {
-            const maps = await db.collection("beatSaverLocal").find({deleted: { $exists: true }}).toArray();
+        else if (ctx.url.startsWith('/deleted')) {
+            const maps = await db.collection("beatSaverLocal").find({ deleted: { $exists: true } }).toArray();
             const playlistHashes = await hashes(maps);
             const playlist = await createPlaylist("Lost & forgotten maps", playlistHashes, `https://cdn.discordapp.com/attachments/840144337231806484/1041471611213205554/image.png`, `deleted`, "This playlist contains maps that are deleted.")
             ctx.body = playlist;
         }
     });
 
-    app.listen(3000);
+    app.listen(3001);
 })
 
 async function hashes(maps) {
@@ -341,8 +410,7 @@ async function hashes(maps) {
     return mapHashes;
 }
 
-
-async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, playlistDesc) {
+async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, playlistDesc, folder, folderImage) {
     let image = "";
     if (imageLink) {
         try {
@@ -353,6 +421,40 @@ async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, play
         } catch (err) {
             console.log(err)
         }
+    }
+    else if (folderImage) {
+        let images = await readdir(`./images/${folder}`);
+        let imageToFind = images.find(e => e === folderImage);
+
+        if (!imageToFind) {
+            console.log("generating new image")
+            let dlImage;
+            if (folderImage.length === 17) {
+                dlImage = await fetch(`https://cdn.scoresaber.com/avatars/${folderImage}.jpg`)
+                    .then(res => res.buffer());
+            }
+            else {
+                dlImage = await fetch(`https://cdn.scoresaber.com/avatars/oculus.png`)
+                    .then(res => res.buffer());
+            }
+
+            const base64img = await sharp(dlImage)
+                .resize({
+                    fit: sharp.fit.contain,
+                    height: 184,
+                    width: 184
+                })
+                .composite([{ input: `./images/base/${folder}.png` }])
+                .png()
+                .toBuffer()
+                .then(buf => `data:image/png;base64,` + buf.toString('base64'))
+
+            await fs.writeFile(`./images/${folder}/${folderImage}`, base64img, err => {
+                if (err) console.log(err);
+            })
+        }
+
+        image = await fs.readFile(`./images/${folder}/${folderImage}`, { encoding: 'utf8' });
     }
 
     let syncurl = "";
@@ -391,4 +493,9 @@ function findPlayCategory(diffName) {
     else if (diffName.endsWith("OneSaber")) return "OneSaber"
     else if (diffName.endsWith("360Degree")) return "360Degree"
     else return "90Degree"
+}
+
+function checkAuth(req, ctx, next) {
+    if (req.isAuthenticated()) return next();
+    ctx.body = 'not logged in :(';
 }
