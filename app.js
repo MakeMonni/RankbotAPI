@@ -203,7 +203,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                         $regex: searchString,
                         $options: 'i'
                     },
-                    deleted: { $exists: false }
+                    deleted: false
                 })
                 .toArray();
 
@@ -411,7 +411,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith('/rankData')) {
-            
+
 
             const result = await client.db.collection("discordRankBotScores").aggregate([
                 { $match: { ranked: true, country: user.country } },
