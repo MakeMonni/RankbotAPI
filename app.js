@@ -203,7 +203,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                         $regex: searchString,
                         $options: 'i'
                     },
-                    deleted: false
+                    $or: [{ deleted: false }, { deleted: { $exists: false } }]
                 })
                 .toArray();
 
