@@ -4,5 +4,6 @@
   "syncURL": "",
   "clientID": "",
   "clientSecret": "",
-  "callbackURL":""
+  "callbackURL":"",
+  "port": 3000
 }

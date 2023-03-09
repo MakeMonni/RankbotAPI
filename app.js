@@ -1,4 +1,5 @@
 const Koa = require('koa');
+//const router = require('/routes')
 const bodyParser = require('koa-bodyparser');
 const session = require('koa-generic-session');
 const passport = require('koa-passport');
@@ -105,7 +106,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                     const mapHash = { hash: maps[i].hash }
                     if (!hashlist.some(e => e.hash === maps[i].hash)) hashlist.push(mapHash);
                 }
-                playlistDesc = "All Scoresaber ranked maps in no particular order";
+                playlistDesc = "All Scoresaber ranked maps in order of ranking date";
             }
 
             let playlist = await createPlaylist("Ranked", hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/880192078217355284/750250421259337748.png", syncURL, playlistDesc);
@@ -348,21 +349,21 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             let type = "";
             let titlestring = "";
 
-            if (rank){
+            if (rank) {
                 rankstring = `has the rank ${rank}`;
                 titlestring = `${name} rank ${rank}`
                 type = "r";
-            } 
-            else if (higher){
+            }
+            else if (higher) {
                 rankstring = `is higher rank than ${higher}`;
                 titlestring = `${name} higher than ${higher}`;
                 type = "h";
-            } 
-            else if (lower){
+            }
+            else if (lower) {
                 rankstring = `is lower rank than ${lower}`;
                 titlestring = `${name} lower than ${lower}`;
                 type = "l";
-            } 
+            }
 
 
 
@@ -404,10 +405,24 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith('/deleted')) {
-            const maps = await db.collection("beatSaverLocal").find({ deleted: { $exists: true } }).toArray();
+            const maps = await db.collection("beatSaverLocal").find({ deleted: true }).toArray();
             const playlistHashes = await hashes(maps);
             const playlist = await createPlaylist("Lost & forgotten maps", playlistHashes, `https://cdn.discordapp.com/attachments/840144337231806484/1041471611213205554/image.png`, `deleted`, "This playlist contains maps that are deleted.")
             ctx.body = playlist;
+        }
+        else if (ctx.url.startsWith('/rankData')) {
+            
+
+            const result = await client.db.collection("discordRankBotScores").aggregate([
+                { $match: { ranked: true, country: user.country } },
+                { $sort: { score: -1, date: 1 } },
+                {
+                    $group: {
+                        _id: { leaderboardId: "$leaderboardId" },
+                        scores: { $push: { score: "$score", player: "$player" } }
+                    }
+                },
+            ]).toArray();
         }
     });
 
