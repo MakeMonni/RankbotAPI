@@ -411,18 +411,20 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith('/rankData')) {
+            const country = params.c;
 
-
-            const result = await client.db.collection("discordRankBotScores").aggregate([
-                { $match: { ranked: true, country: user.country } },
+            const result = await db.collection("discordRankBotScores").aggregate([
+                { $match: { ranked: true, country: country } },
                 { $sort: { score: -1, date: 1 } },
                 {
                     $group: {
-                        _id: { leaderboardId: "$leaderboardId" },
+                        _id: { hash: "$hash" , diff: "$diff" },
                         scores: { $push: { score: "$score", player: "$player" } }
                     }
                 },
             ]).toArray();
+
+            ctx.body = result;
         }
     });
 
