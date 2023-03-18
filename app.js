@@ -347,7 +347,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 }
             }
 
-            maps.sort((a, b) => a.timeSet - b.timeSet)
+            mpas = maps.sort((a, b) => a.timeSet - b.timeSet)
 
             let rankstring = "";
             let type = "";
