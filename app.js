@@ -315,7 +315,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const higher = params.h
             const name = params.n
 
-            let result = await db.collection("discordRankBotScores").aggregate([
+            const result = await db.collection("discordRankBotScores").aggregate([
 
                 { $match: { ranked: true, country: country } },
                 { $sort: { score: -1, date: 1 } },
@@ -327,8 +327,6 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 },
             ]).toArray()
 
-            result = result.sort((a, b) => a.scores.find(e => e.player).date - b.scores.find(e => e.player).date)
-
             let maps = []
             for (let i = 0; i < result.length; i++) {
                 const index = result[i].scores.findIndex(e => e.player === player)
@@ -339,14 +337,17 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                             difficulties: [
                                 {
                                     characteristic: findPlayCategory(result[i]._id.diff),
-                                    name: convertDiffNameBeatSaver(result[i]._id.diff)
+                                    name: convertDiffNameBeatSaver(result[i]._id.diff),
                                 }
-                            ]
+                            ],
+                            timeSet: result[i].scores.find(e => e.player).date
                         }
                         maps.push(songHash)
                     }
                 }
             }
+
+            maps.sort((a, b) => a.timeSet - b.timeSet)
 
             let rankstring = "";
             let type = "";
