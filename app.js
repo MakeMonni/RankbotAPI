@@ -340,7 +340,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                                     name: convertDiffNameBeatSaver(result[i]._id.diff),
                                 }
                             ],
-                            timeSet: result[i].scores.find(e => e.player).date
+                            timeSet: result[i].scores.find(e => e.player === player).date
                         }
                         maps.push(songHash)
                     }
