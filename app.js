@@ -315,16 +315,19 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const higher = params.h
             const name = params.n
 
-            const result = await db.collection("discordRankBotScores").aggregate([
+            let result = await db.collection("discordRankBotScores").aggregate([
+
                 { $match: { ranked: true, country: country } },
                 { $sort: { score: -1, date: 1 } },
                 {
                     $group: {
                         _id: { hash: "$hash", diff: "$diff" },
-                        scores: { $push: { score: "$score", player: "$player" } }
+                        scores: { $push: { score: "$score", player: "$player", date: "$date" } }
                     }
                 },
             ]).toArray()
+
+            result = result.sort((a, b) => a.scores.find(e => e.player).date - b.scores.find(e => e.player).date)
 
             let maps = []
             for (let i = 0; i < result.length; i++) {
@@ -418,7 +421,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 { $sort: { score: -1, date: 1 } },
                 {
                     $group: {
-                        _id: { hash: "$hash" , diff: "$diff" },
+                        _id: { hash: "$hash", diff: "$diff" },
                         scores: { $push: { score: "$score", player: "$player" } }
                     }
                 },
