@@ -278,6 +278,25 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 ctx.body = playlist;
             }
         }
+        else if (ctx.url.startsWith(`/maps`)) {
+            console.log("herhe")
+            const hash = params.h;
+            const key = params.k;
+            let maps;
+            if (hash) {
+                console.log("hash")
+                const hashes = params.h.split(`,`);
+                maps = await db.collection("beatSaverLocal").find({ "versions.hash": { $in: hashes } }).toArray();
+            }
+            else if (key) {
+                console.log("key")
+                const keys = params.h.split(`,`);
+                maps = await db.collection("beatSaverLocal").find({ key: { $in: keys } }).toArray();
+            }
+            if (maps) {
+                ctx.body = maps;
+            }
+        }
         else if (ctx.url.startsWith(`/map`)) {
             const hash = params.h;
             const key = params.k;
@@ -292,6 +311,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 ctx.body = map;
             }
         }
+        
         else if (ctx.url.startsWith('/random')) {
             let amount = parseInt(params.a);
             if (!amount) amount = 25;
