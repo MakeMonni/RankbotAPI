@@ -311,7 +311,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 ctx.body = map;
             }
         }
-        
+
         else if (ctx.url.startsWith('/random')) {
             let amount = parseInt(params.a);
             if (!amount) amount = 25;
@@ -450,6 +450,33 @@ MongoClient.connect(config.mongourl, async (err, client) => {
 
             ctx.body = result;
         }
+        else if (ctx.url.startsWith('/rating')) {
+            const amount = parseInt(params.a, 10);
+            const rating = params.r;
+            const overUnder = params.u;
+
+            const hashes = await fetch('https://beatsaber.tskoll.com/api/v1/hashes')
+                .then(res => res.json())
+                .catch(err => console.log(err));
+
+            let playlistHashes = [];
+            const shuffledArr = shuffle(hashes)
+
+            for (let i = 0; i < shuffledArr.length; i++) {
+                const map = await fetch(`https://beatsaber.tskoll.com/api/v1/hash/${shuffledArr[i]}`)
+                    .then(res => res.json())
+                    .catch(err => console.log(err));
+
+                const mapRating = map.upvotes / (map.upvotes + map.downvotes + 1);
+                console.log(mapRating, playlistHashes.length)
+                if ((overUnder === "over" && mapRating > (rating/100)) || (overUnder === "under" && mapRating < (rating/100))) {
+                    playlistHashes.push({ hash: map.hash })
+                }
+                if (playlistHashes.length === amount) i = shuffledArr.length;
+            }
+            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, `rating?a=${amount}&r=${rating}$u=${overUnder}`, `Playlist containing ${amount} maps ${overUnder} ${rating}% rating.`);
+            ctx.body = playlist;
+        }
     });
 
     app.listen(config.port);
@@ -555,4 +582,12 @@ function findPlayCategory(diffName) {
 function checkAuth(req, ctx, next) {
     if (req.isAuthenticated()) return next();
     ctx.body = 'not logged in :(';
+}
+
+function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
 }
