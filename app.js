@@ -460,21 +460,23 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 .catch(err => console.log(err));
 
             let playlistHashes = [];
+            let mapsChecked = 0;
             const shuffledArr = shuffle(hashes)
 
             for (let i = 0; i < shuffledArr.length; i++) {
+                mapsChecked++;
                 const map = await fetch(`https://beatsaber.tskoll.com/api/v1/hash/${shuffledArr[i]}`)
                     .then(res => res.json())
                     .catch(err => console.log(err));
 
                 const mapRating = map.upvotes / (map.upvotes + map.downvotes + 1);
-                console.log(mapRating, playlistHashes.length)
                 if ((overUnder === "over" && mapRating > (rating/100)) || (overUnder === "under" && mapRating < (rating/100))) {
                     playlistHashes.push({ hash: map.hash })
                 }
                 if (playlistHashes.length === amount) i = shuffledArr.length;
             }
-            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, `rating?a=${amount}&r=${rating}$u=${overUnder}`, `Playlist containing ${amount} maps ${overUnder} ${rating}% rating.`);
+            console.log(mapsChecked, "maps checked for rating list")
+            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, `rating?a=${amount}&r=${rating}$u=${overUnder}`, `We checked ${mapsChecked} to create this list.\nPlaylist containing ${amount} maps ${overUnder} ${rating}% rating.`);
             ctx.body = playlist;
         }
     });
