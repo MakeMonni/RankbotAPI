@@ -454,6 +454,8 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const amount = parseInt(params.a, 10);
             const rating = params.r;
             const overUnder = params.u;
+            let minVotes = parseInt(params.m, 10);
+            if(isNaN(minVotes)) minVotes = 0;
 
             const hashes = await fetch('https://beatsaber.tskoll.com/api/v1/hashes')
                 .then(res => res.json())
@@ -470,7 +472,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                     .catch(err => console.log(err));
 
                 const mapRating = map.upvotes / (map.upvotes + map.downvotes + 1);
-                if ((overUnder === "over" && mapRating > (rating/100)) || (overUnder === "under" && mapRating < (rating/100))) {
+                if (((overUnder === "over" && mapRating > (rating/100)) || (overUnder === "under" && mapRating < (rating/100))) && +map.upvotes + +map.downvotes > minVotes) {
                     playlistHashes.push({ hash: map.hash })
                 }
                 if (playlistHashes.length === amount) i = shuffledArr.length;
