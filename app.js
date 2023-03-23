@@ -455,7 +455,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const rating = params.r;
             const overUnder = params.u;
             let minVotes = parseInt(params.m, 10);
-            if(isNaN(minVotes)) minVotes = 0;
+            if (isNaN(minVotes)) minVotes = 0;
 
             const hashes = await fetch('https://beatsaber.tskoll.com/api/v1/hashes')
                 .then(res => res.json())
@@ -472,13 +472,15 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                     .catch(err => console.log(err));
 
                 const mapRating = map.upvotes / (map.upvotes + map.downvotes + 1);
-                if (((overUnder === "over" && mapRating > (rating/100)) || (overUnder === "under" && mapRating < (rating/100))) && +map.upvotes + +map.downvotes > minVotes) {
+                if (((overUnder === "over" && mapRating > (rating / 100)) || (overUnder === "under" && mapRating < (rating / 100))) && +map.upvotes + +map.downvotes > minVotes) {
                     playlistHashes.push({ hash: map.hash })
                 }
                 if (playlistHashes.length === amount) i = shuffledArr.length;
             }
             console.log(mapsChecked, "maps checked for rating list")
-            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, `rating?a=${amount}&r=${rating}$u=${overUnder}`, `We checked ${mapsChecked} to create this list.\nPlaylist containing ${amount} maps ${overUnder} ${rating}% rating.`);
+            let syncURL = `rating?a=${amount}&r=${rating}$u=${overUnder}`;
+            if (minVotes !== 0) syncURL += `&m=${minVotes}`
+            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, syncURL, `We checked ${mapsChecked} to create this list.\nPlaylist containing ${amount} maps ${overUnder} ${rating}% rating.`);
             ctx.body = playlist;
         }
     });
