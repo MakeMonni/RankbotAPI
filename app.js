@@ -478,7 +478,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 if (playlistHashes.length === amount) i = shuffledArr.length;
             }
             console.log(mapsChecked, "maps checked for rating list")
-            let syncURL = `rating?a=${amount}&r=${rating}$u=${overUnder}`;
+            let syncURL = `rating?a=${amount}&r=${rating}&u=${overUnder}`;
             if (minVotes !== 0) syncURL += `&m=${minVotes}`
             const playlist = await createPlaylist("Ratinglist", playlistHashes, false, syncURL, `We checked ${mapsChecked} to create this list.\nPlaylist containing ${amount} maps ${overUnder} ${rating}% rating.`);
             ctx.body = playlist;
