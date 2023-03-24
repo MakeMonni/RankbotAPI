@@ -452,35 +452,39 @@ MongoClient.connect(config.mongourl, async (err, client) => {
         }
         else if (ctx.url.startsWith('/rating')) {
             const amount = parseInt(params.a, 10);
-            const rating = params.r;
-            const overUnder = params.u;
+            const rating = params.r / 100;
+            const overUnder = params.u.toUpperCase();
             let minVotes = parseInt(params.m, 10);
-            if (isNaN(minVotes)) minVotes = 0;
 
-            const hashes = await fetch('https://beatsaber.tskoll.com/api/v1/hashes')
-                .then(res => res.json())
-                .catch(err => console.log(err));
-
-            let playlistHashes = [];
-            let mapsChecked = 0;
-            const shuffledArr = shuffle(hashes)
-
-            for (let i = 0; i < shuffledArr.length; i++) {
-                mapsChecked++;
-                const map = await fetch(`https://beatsaber.tskoll.com/api/v1/hash/${shuffledArr[i]}`)
-                    .then(res => res.json())
-                    .catch(err => console.log(err));
-
-                const mapRating = map.upvotes / (map.upvotes + map.downvotes + 1);
-                if (((overUnder === "over" && mapRating > (rating / 100)) || (overUnder === "under" && mapRating < (rating / 100))) && +map.upvotes + +map.downvotes > minVotes) {
-                    playlistHashes.push({ hash: map.hash })
-                }
-                if (playlistHashes.length === amount) i = shuffledArr.length;
+            let query = {
+                filters: [
+                    {
+                        type: "float",
+                        field: "RATING",
+                        operation: overUnder,
+                        threshold: rating
+                    }
+                ]
             }
-            console.log(mapsChecked, "maps checked for rating list")
-            let syncURL = `rating?a=${amount}&r=${rating}&u=${overUnder}`;
+            if (!isNaN(minVotes)) {
+                query.filters.push({
+                    type: "number",
+                    field: "TOTALVOTES",
+                    operation: "ABOVE",
+                    threshold: minVotes
+                })
+            }
+
+            const hashes = await fetch("https://beatsaber.tskoll.com/api/v1/filter", { method: "POST", body: JSON.stringify(query), headers: { "Content-Type": 'application/json' } })
+                .then(res => res.json())
+                .catch(err => console.log(err))
+
+            const shuffledArr = shuffle(hashes);
+            const playlistHashes = shuffledArr.slice(0, amount).map(e => { return { hash: e } });
+
+            let syncURL = `rating?a=${amount}&r=${rating*100}&u=${overUnder}`;
             if (minVotes !== 0) syncURL += `&m=${minVotes}`
-            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, syncURL, `We checked ${mapsChecked} to create this list.\nPlaylist containing ${amount} maps ${overUnder} ${rating}% rating.`);
+            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, syncURL, `A total of ${hashes.length} can be found with this filter.\nPlaylist containing ${amount} maps ${overUnder} ${rating*100}% rating.`);
             ctx.body = playlist;
         }
     });
