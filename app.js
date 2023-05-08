@@ -290,7 +290,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             }
             else if (key) {
                 console.log("key")
-                const keys = params.k.split(`,`);
+                const keys = params.k.split(`,`).toUpperCase();
                 maps = await db.collection("beatSaverLocal").find({ key: { $in: keys } }).toArray();
             }
             if (maps) {
