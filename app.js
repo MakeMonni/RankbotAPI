@@ -311,20 +311,47 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 ctx.body = map;
             }
         }
-
         else if (ctx.url.startsWith('/random')) {
             let amount = parseInt(params.a);
             if (!amount) amount = 25;
 
-            const maps = await db.collection("beatSaverLocal").aggregate([{ $match: { automapper: false } }, { $sample: { size: amount } }]).toArray();
+            const njs = parseInt(params.njs);
+            const njsType = params.njstype;
+            const nps = parseInt(params.nps);
+            const npsType = params.npstype;
+            const length = parseInt(params.length);
+            const lengthType = params.lengthType;
+
+            let filterQuery = [];
+            if (njs) {
+                filterQuery.push({"versions.0.diffs.njs": {[greaterOrLower(njsType)]:njs}})
+            }
+            if (nps) {
+                filterQuery.push({"versions.0.diffs.nps": {[greaterOrLower(npsType)]:nps}})
+            }
+            if (length) {
+                filterQuery.push({"versions.0.diffs.njs": {[greaterOrLower(lengthType)]:length}})
+            }
+
+            let matchQuery = { automapper: false } 
+            if (filterQuery.length > 0)
+            {
+                matchQuery = { 
+                    automapper: false,
+                    $and: filterQuery
+                } 
+            }
+
+            const maps = await db.collection("beatSaverLocal").aggregate([{ $match: matchQuery }, { $sample: { size: amount } }]).toArray();
             const mapHashes = await hashes(maps);
 
             const playlist = await createPlaylist(
                 "Random",
                 mapHashes,
                 "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg",
-                `random?a=${amount}`,
+                ctx.request.URL,
                 "A random playlist :)");
+
             ctx.body = playlist;
         }
         else if (ctx.url.startsWith('/countryRank')) {
@@ -482,9 +509,9 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const shuffledArr = shuffle(hashes);
             const playlistHashes = shuffledArr.slice(0, amount).map(e => { return { hash: e } });
 
-            let syncURL = `rating?a=${amount}&r=${rating*100}&u=${overUnder}`;
+            let syncURL = `rating?a=${amount}&r=${rating * 100}&u=${overUnder}`;
             if (minVotes !== 0) syncURL += `&m=${minVotes}`
-            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, syncURL, `A total of ${hashes.length} can be found with this filter.\nPlaylist containing ${amount} maps ${overUnder} ${rating*100}% rating.`);
+            const playlist = await createPlaylist("Ratinglist", playlistHashes, false, syncURL, `A total of ${hashes.length} can be found with this filter.\nPlaylist containing ${amount} maps ${overUnder} ${rating * 100}% rating.`);
             ctx.body = playlist;
         }
     });
@@ -600,4 +627,9 @@ function shuffle(a) {
         [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
+}
+
+function greaterOrLower(category){
+    //Potentially think about bad request here with a case structure
+    return category === "over" ? '$gte' : '$lte'
 }
