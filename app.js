@@ -323,24 +323,29 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const lengthType = params.lengthtype;
 
             let filterQuery = [];
+            let lenghtQuery = {}
             if (njs) {
-                filterQuery.push({"versions.0.diffs.njs": {[greaterOrLower(njsType)]:njs}})
+                filterQuery.push({ "njs": { [greaterOrLower(njsType)]: njs } })
             }
             if (nps) {
-                filterQuery.push({"versions.0.diffs.nps": {[greaterOrLower(npsType)]:nps}})
+                filterQuery.push({ "nps": { [greaterOrLower(npsType)]: nps } })
             }
             if (length) {
-                filterQuery.push({"metadata.duration": {[greaterOrLower(lengthType)]:length}})
+                lenghtQuery = { [greaterOrLower(lengthType)]: length }
             }
 
-            let matchQuery = { automapper: false } 
-            if (filterQuery.length > 0)
-            {
-                matchQuery = { 
+            let matchQuery = { automapper: false }
+            if (filterQuery.length > 0) {
+                matchQuery = {
                     automapper: false,
-                    $and: filterQuery
-                } 
+                    "versions.0.diffs": { $elemMatch: { $and: filterQuery } }
+                }
             }
+            if (length) {
+                matchQuery["metadata.duration"] = lenghtQuery
+            }
+
+            console.log(matchQuery)
 
             const maps = await db.collection("beatSaverLocal").aggregate([{ $match: matchQuery }, { $sample: { size: amount } }]).toArray();
             const mapHashes = await hashes(maps);
@@ -629,7 +634,7 @@ function shuffle(a) {
     return a;
 }
 
-function greaterOrLower(category){
+function greaterOrLower(category) {
     //Potentially think about bad request here with a case structure
     return category === "over" ? '$gte' : '$lte'
 }
