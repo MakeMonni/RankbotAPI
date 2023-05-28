@@ -330,7 +330,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 filterQuery.push({"versions.0.diffs.nps": {[greaterOrLower(npsType)]:nps}})
             }
             if (length) {
-                filterQuery.push({"versions.0.diffs.njs": {[greaterOrLower(lengthType)]:length}})
+                filterQuery.push({"metadata.duration": {[greaterOrLower(lengthType)]:length}})
             }
 
             let matchQuery = { automapper: false } 
