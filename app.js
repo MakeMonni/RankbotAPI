@@ -352,7 +352,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 "Random",
                 mapHashes,
                 "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg",
-                ctx.request.url,
+                ctx.request.url.replace("/", ""),
                 "A random playlist :)");
 
             ctx.body = playlist;
