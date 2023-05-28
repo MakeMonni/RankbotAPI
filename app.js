@@ -320,7 +320,7 @@ MongoClient.connect(config.mongourl, async (err, client) => {
             const nps = parseInt(params.nps);
             const npsType = params.npstype;
             const length = parseInt(params.length);
-            const lengthType = params.lengthType;
+            const lengthType = params.lengthtype;
 
             let filterQuery = [];
             if (njs) {
