@@ -345,8 +345,6 @@ MongoClient.connect(config.mongourl, async (err, client) => {
                 matchQuery["metadata.duration"] = lenghtQuery
             }
 
-            console.log(matchQuery)
-
             const maps = await db.collection("beatSaverLocal").aggregate([{ $match: matchQuery }, { $sample: { size: amount } }]).toArray();
             const mapHashes = await hashes(maps);
 
