@@ -1,8 +1,5 @@
 const mapper = async (ctx) => {
 
-    const key = ctx.query.k
-    ctx.redirect(`beatsaver://${key}`)
-
     const mappers = ctx.query.t.split(`,`);
     const keepDeleted = ctx.query.k
 
@@ -40,12 +37,14 @@ const mapper = async (ctx) => {
 
     if (allMaps.length === 0) {
         const playlist = await ctx.helpers.createPlaylist(playlistTitle, [], "", ctx.request.url.slice(1), `Sorry this/these mappers have no maps. \n${playlistDesc}`);
+        
         ctx.body = playlist;
     }
     else {
         allMaps.sort(function (a, b) { return b.versions[0].createdAt - a.versions[0].createdAt })
         let mapHashes = await ctx.helpers.hashes(allMaps);
         const playlist = await ctx.helpers.createPlaylist(playlistTitle, mapHashes, playlistImage, ctx.request.url.slice(1), playlistDesc);
+
         ctx.body = playlist;
     }
 }
