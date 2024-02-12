@@ -1,4 +1,4 @@
-const oneclick = async (ctx) => {
+const countryrank = async (ctx) => {
 
     const player = ctx.query.p;
     const country = ctx.query.c;
@@ -70,4 +70,4 @@ const oneclick = async (ctx) => {
 
     ctx.body = playlist
 }
-module.exports = oneclick
+module.exports = countryrank

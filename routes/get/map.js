@@ -1,4 +1,4 @@
-const oneclick = async (ctx) => {
+const map = async (ctx) => {
 
     const hash = ctx.query.h;
     const key = ctx.query.k;
@@ -14,4 +14,4 @@ const oneclick = async (ctx) => {
     }
 
 }
-module.exports = oneclick
+module.exports = map
