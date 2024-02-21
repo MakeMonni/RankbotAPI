@@ -17,19 +17,45 @@ const mapper = async (ctx) => {
     // Because currently mongo.db cannot use regex boundary -> /b
 
     const allMaps = await ctx.db.collection("beatSaverLocal")
-        .find({
-            'metadata.levelAuthorName': {
-                $regex: searchString,
-                $options: 'i'
+        .aggregate([
+            {
+                $match: {
+                    "metadata.levelAuthorName": {
+                        $regex: searchString,
+                        $options: "i"
+                    },
+                    $or: [
+                        { deleted: false },
+                        { deleted: { $exists: false } }
+                    ],
+                    "versions.state": "Published"
+                }
             },
-            $or: [{ deleted: false }, { deleted: { $exists: false } }]
-        })
+            { $unwind: "$versions" },
+            { $sort: { "versions.createdAt": -1 } },
+            {
+                $group: {
+                    _id: "$_id",
+                    hash: { $first: "$versions.hash" },
+                    img: { $first: "$versions.coverURL" },
+                    createdAt: { $first: "$versions.createdAt" }
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    hash: 1,
+                    img: 1,
+                    createdAt: 1
+                }
+            }
+        ])
         .toArray();
 
     console.log("found " + allMaps.length + "maps ")
     playlistDesc += `\n` + mappers.join(`\n`)
 
-    let playlistImage = allMaps[allMaps.length - 1].versions[0].coverURL
+    let playlistImage = allMaps[allMaps.length - 1].img
     if (mappers.length > 1) {
         playlistTitle = "Various mappers"
         playlistImage = "https://cdn.discordapp.com/attachments/840144337231806484/990283151723073616/variousmappers.png"
@@ -37,12 +63,12 @@ const mapper = async (ctx) => {
 
     if (allMaps.length === 0) {
         const playlist = await ctx.helpers.createPlaylist(playlistTitle, [], "", ctx.request.url.slice(1), `Sorry this/these mappers have no maps. \n${playlistDesc}`);
-        
+
         ctx.body = playlist;
     }
     else {
-        allMaps.sort(function (a, b) { return b.versions[0].createdAt - a.versions[0].createdAt })
-        let mapHashes = await ctx.helpers.hashes(allMaps);
+        allMaps.sort(function (a, b) { return b.createdAt - a.createdAt })
+        let mapHashes = await ctx.helpers.hashesSimple(allMaps.map(e => e.hash));
         const playlist = await ctx.helpers.createPlaylist(playlistTitle, mapHashes, playlistImage, ctx.request.url.slice(1), playlistDesc);
 
         ctx.body = playlist;

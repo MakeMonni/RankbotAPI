@@ -15,6 +15,14 @@ async function hashes(maps) {
     return mapHashes;
 }
 
+async function hashesSimple(maps) {
+    let mapHashes = [];
+    for (let i = 0; i < maps.length; i++) {
+        if (maps[i]) { mapHashes.push({hash: maps[i].toUpperCase()})  }
+    }
+    return mapHashes;
+}
+
 async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, playlistDesc, folder, folderImage) {
     let image = "";
     if (imageLink) {
@@ -115,6 +123,7 @@ function greaterOrLower(category) {
 
 module.exports = {
     hashes,
+    hashesSimple,
     createPlaylist,
     convertDiffNameBeatSaver,
     findPlayCategory,
