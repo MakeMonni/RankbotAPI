@@ -27,26 +27,27 @@ const mapper = async (ctx) => {
                     $or: [
                         { deleted: false },
                         { deleted: { $exists: false } }
-                    ],
+                    ]
                 }
             },
-            { $unwind: "$versions" },
-            { $sort: { "versions.createdAt": -1 } },
-            { $match: { "versions.state": "Published" } },
             {
-                $group: {
-                    _id: "$_id",
-                    hash: { $first: "$versions.hash" },
-                    img: { $first: "$versions.coverURL" },
-                    createdAt: { $first: "$versions.createdAt" }
+                $addFields: {
+                    versions: {
+                        $filter: {
+                            input: "$versions",
+                            as: "version",
+                            cond: { $eq: ["$$version.state", "Published"] }
+                        }
+                    }
                 }
             },
+            { $addFields: { versions: { $slice: ["$versions", 1] } } },
             {
                 $project: {
                     _id: 1,
-                    hash: 1,
-                    img: 1,
-                    createdAt: 1
+                    hash: { $arrayElemAt: ["$versions.hash", 0] },
+                    img: { $arrayElemAt: ["$versions.coverURL", 0] },
+                    createdAt: { $arrayElemAt: ["$versions.createdAt", 0] }
                 }
             }
         ])
