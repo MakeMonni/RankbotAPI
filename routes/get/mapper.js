@@ -28,11 +28,11 @@ const mapper = async (ctx) => {
                         { deleted: false },
                         { deleted: { $exists: false } }
                     ],
-                    "versions.state": "Published"
                 }
             },
             { $unwind: "$versions" },
             { $sort: { "versions.createdAt": -1 } },
+            { $match: { "versions.state": "Published" } },
             {
                 $group: {
                     _id: "$_id",
