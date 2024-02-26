@@ -18,7 +18,7 @@ async function hashes(maps) {
 async function hashesSimple(maps) {
     let mapHashes = [];
     for (let i = 0; i < maps.length; i++) {
-        if (maps[i]) { mapHashes.push({hash: maps[i].toUpperCase()})  }
+        if (maps[i]) { mapHashes.push({ hash: maps[i].toUpperCase() }) }
     }
     return mapHashes;
 }
@@ -67,7 +67,12 @@ async function createPlaylist(playlistName, songs, imageLink, syncEndpoint, play
             })
         }
 
-        image = await fs.readFile(`./images/${folder}/${folderImage}`, { encoding: 'utf8' });
+        if (folderImage.endsWith(".png")) {
+            const imageType = folderImage.split(".")[folderImage.split(".").length - 1];
+            const buf = await fs.readFile(`./images/${folder}/${folderImage}`);
+            image = `data:image/${imageType};base64,` + buf.toString('base64');
+        }
+        else image = await fs.readFile(`./images/${folder}/${folderImage}`, { encoding: 'utf8' });
     }
 
     let syncurl = "";

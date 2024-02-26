@@ -57,10 +57,15 @@ const mapper = async (ctx) => {
     console.log("found " + allMaps.length + "maps ")
     playlistDesc += `\n` + mappers.join(`\n`)
 
-    let playlistImage = allMaps[allMaps.length - 1].img
+    let playlistImage = allMaps[allMaps.length - 1].img;
+    let playlistImgFolder = "";
+    let playlistImgLocal = "";
+
     if (mappers.length > 1) {
         playlistTitle = "Various mappers"
-        playlistImage = "https://cdn.discordapp.com/attachments/840144337231806484/990283151723073616/variousmappers.png"
+        playlistImage = ""
+        playlistImgFolder = "base"
+        playlistImgLocal = "variousmappers.png" 
     }
 
     if (allMaps.length === 0) {
@@ -71,7 +76,7 @@ const mapper = async (ctx) => {
     else {
         allMaps.sort(function (a, b) { return b.createdAt - a.createdAt })
         let mapHashes = await ctx.helpers.hashesSimple(allMaps.map(e => e.hash));
-        const playlist = await ctx.helpers.createPlaylist(playlistTitle, mapHashes, playlistImage, ctx.request.url.slice(1), playlistDesc);
+        const playlist = await ctx.helpers.createPlaylist(playlistTitle, mapHashes, playlistImage, ctx.request.url.slice(1), playlistDesc, playlistImgFolder, playlistImgLocal);
 
         ctx.body = playlist;
     }
