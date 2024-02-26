@@ -42,6 +42,7 @@ const mapper = async (ctx) => {
                 }
             },
             { $addFields: { versions: { $slice: ["$versions", 1] } } },
+            { $sort: {"versions.createdAt": -1}},
             {
                 $project: {
                     _id: 1,
