@@ -39,9 +39,11 @@ const random = async (ctx) => {
     const playlist = await ctx.helpers.createPlaylist(
         "Random",
         mapHashes,
-        "https://cdn.discordapp.com/attachments/818358679296147487/844607045130387526/Banana_Dice.jpg",
+        "",
         ctx.request.url.replace("/", ""),
-        "A random playlist :)");
+        "A random playlist :)",
+        "base", 
+        "random.png");
 
     ctx.body = playlist;
 

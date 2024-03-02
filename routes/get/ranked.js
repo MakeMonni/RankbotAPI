@@ -24,7 +24,7 @@ const ranked = async (ctx) => {
         playlistDesc = "All Scoresaber ranked maps in order of ranking date";
     }
 
-    let playlist = await ctx.helpers.createPlaylist("Ranked", hashlist, "https://cdn.discordapp.com/attachments/840144337231806484/880192078217355284/750250421259337748.png", syncURL, playlistDesc);
+    let playlist = await ctx.helpers.createPlaylist("Ranked", hashlist, "", syncURL, playlistDesc, "base", "scoresaber.png");
 
     ctx.body = playlist;
 }

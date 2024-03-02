@@ -7,9 +7,14 @@ async function hashes(maps) {
     let mapHashes = [];
     for (let i = 0; i < maps.length; i++) {
         let songhash = {}
-        if (maps[i]?.versions[0]?.hash) {
-            songhash = { hash: maps[i]?.versions[0].hash.toUpperCase() }
-            mapHashes.push(songhash)
+        try {
+            if (maps[i].versions && maps[i]?.versions[0]?.hash) {
+                songhash = { hash: maps[i]?.versions[0]?.hash.toUpperCase() }
+                mapHashes.push(songhash)
+            }
+        }
+        catch (err) {
+            console.log("Error with map", maps[i], err)
         }
     }
     return mapHashes;
