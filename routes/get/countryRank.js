@@ -8,7 +8,6 @@ const countryrank = async (ctx) => {
     const name = ctx.query.n
 
     const result = await ctx.db.collection("discordRankBotScores").aggregate([
-
         { $match: { ranked: true, country: country } },
         { $sort: { score: -1, date: 1 } },
         {
