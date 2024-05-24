@@ -8,9 +8,11 @@ const overlayPoolChange = async (ctx) => {
             const body = ctx.request.body;
 
             if (!body.pool) ctx.throw(400, '.pool required')
+            if (!body.coordinatorUser) ctx.throw(400, '.pool required')
 
             ctx.wsClient.send(JSON.stringify({
                 type: "poolChangeClient",
+                coordinatorUser: body.coordinatorUser,
                 pool: body.pool
             }))
 

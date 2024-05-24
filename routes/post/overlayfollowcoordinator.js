@@ -5,11 +5,11 @@ const overlayFollowCoordinator = async (ctx) => {
 
         try {
 
-            if (!body.coordinator) ctx.throw(400, '.coordinator required')
+            if (!body.coordinatorUser) ctx.throw(400, '.coordinator required')
 
             ctx.wsClient.send(JSON.stringify({
                 type: "coordinatorFollow",
-                coordinator: body.coordinator
+                coordinatorUser: body.coordinatorUser
             }))
 
             ctx.status = 200;
