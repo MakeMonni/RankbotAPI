@@ -5,5 +5,11 @@
   "clientID": "",
   "clientSecret": "",
   "callbackURL":"",
-  "port": 3000
+  "port": 3000,
+  "wsUrl": "",
+  
+  "discordAuth": {
+    "clientID": "",
+    "clientSecret": ""
+  }
 }

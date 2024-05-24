@@ -131,6 +131,22 @@ function greaterOrLower(category) {
     return category === "over" ? '$gte' : '$lte'
 }
 
+function generateRandomString() {
+    let randomString = '';
+    const randomNumber = Math.floor(Math.random() * 10);
+
+    for (let i = 0; i < 40 + randomNumber; i++) {
+        let charCode = Math.floor(Math.random() * (126 - 33)) + 33;
+        if (charCode === 34) {
+            charCode++;
+        }
+        randomString += String.fromCharCode(charCode);
+    }
+
+    return randomString;
+}
+
+
 module.exports = {
     hashes,
     hashesSimple,
@@ -138,5 +154,6 @@ module.exports = {
     convertDiffNameBeatSaver,
     findPlayCategory,
     shuffle,
-    greaterOrLower
+    greaterOrLower,
+    generateRandomString
 }
