@@ -6,12 +6,8 @@ const mapper = async (ctx) => {
     let playlistDesc = "Playlist has maps from ";
     let playlistTitle = mappers[0];
 
-    //Following query can include results from mappers that have spaces that include other mappers names in then in 1 word.
-    let searchString = "";
-    for (let i = 0; i < mappers.length; i++) {
-        searchString += "[[:<:]]" + mappers[i] + "[[:>:]]"
-        if (i < mappers.length - 1) searchString += "|";
-    }
+    //Following query can include results from mappers that have spaces that include other mappers names in them in 1 word.
+    let searchString = mappers.map(mapper => `[[:<:]]${mapper}[[:>:]]`).join("|")
 
     //Help for the spaghetti regex https://www.rexegg.com/regex-boundaries.html
     // Because currently mongo.db cannot use regex boundary -> /b
@@ -24,25 +20,25 @@ const mapper = async (ctx) => {
                         $regex: searchString,
                         $options: "i"
                     },
-                    $or: [
-                        { deleted: false },
-                        { deleted: { $exists: false } }
-                    ]
+                    deleted: { $ne: true }
                 }
             },
             {
                 $addFields: {
                     versions: {
-                        $filter: {
-                            input: "$versions",
-                            as: "version",
-                            cond: { $eq: ["$$version.state", "Published"] }
-                        }
+                        $slice: [
+                            {
+                                $filter: {
+                                    input: "$versions",
+                                    as: "version",
+                                    cond: { $eq: ["$$version.state", "Published"] }
+                                }
+                            }, 1
+                        ]
                     }
                 }
             },
-            { $addFields: { versions: { $slice: ["$versions", 1] } } },
-            { $sort: {"versions.createdAt": -1}},
+            { $sort: { "versions.createdAt": -1 } },
             {
                 $project: {
                     _id: 1,
@@ -65,7 +61,7 @@ const mapper = async (ctx) => {
         playlistTitle = "Various mappers"
         playlistImage = ""
         playlistImgFolder = "base"
-        playlistImgLocal = "variousmappers.png" 
+        playlistImgLocal = "variousmappers.png"
     }
 
     if (allMaps.length === 0) {
